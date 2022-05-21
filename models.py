@@ -1,4 +1,5 @@
 from email.policy import default
+from enum import unique
 from fnmatch import fnmatchcase
 from tkinter.tix import INTEGER
 from sqlalchemy import Column, Boolean, VARCHAR, ForeignKey, Text, Integer, Float, DateTime
@@ -14,7 +15,7 @@ class Customers(Base):
     id = Column(Integer,primary_key=True)
     fname = Column(VARCHAR)
     lname = Column(VARCHAR)
-    mobile = Column(VARCHAR)
+    mobile = Column(VARCHAR, unique=True)
     email = Column(Text)
     password = Column(VARCHAR)
     ncode = Column(Integer)
