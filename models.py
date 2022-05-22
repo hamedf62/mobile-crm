@@ -1,7 +1,6 @@
 from email.policy import default
 from enum import unique
 from fnmatch import fnmatchcase
-from tkinter.tix import INTEGER
 from sqlalchemy import Column, Boolean, VARCHAR, ForeignKey, Text, Integer, Float, DateTime
 from sqlalchemy.orm import declarative_base, relation, backref
 from datetime import datetime
@@ -33,7 +32,7 @@ class Products(Base):
     id = Column(Integer,primary_key=True)
     cat_id = Column(Integer, ForeignKey("categories.id"))
     name = Column(VARCHAR)
-    price = Column(Float)
+    price = Column(VARCHAR)
 
     category = relation(Categories, backref=backref("products"))
 
