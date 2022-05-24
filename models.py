@@ -14,7 +14,7 @@ class Customers(Base):
     id = Column(Integer,primary_key=True)
     fname = Column(VARCHAR)
     lname = Column(VARCHAR)
-    mobile = Column(VARCHAR, unique=True)
+    mobile = Column(VARCHAR)
     email = Column(Text)
     password = Column(VARCHAR)
     ncode = Column(Integer)
@@ -32,9 +32,11 @@ class Products(Base):
     id = Column(Integer,primary_key=True)
     cat_id = Column(Integer, ForeignKey("categories.id"))
     name = Column(VARCHAR)
-    price = Column(VARCHAR)
+    price = Column(Float)
 
-    category = relation(Categories, backref=backref("products"))
+    category = relation(Categories,backref=backref("products"))
+
+    invoices = relation("Invoices",secondary="invoice_product" )
 
 
 class Invoices(Base):
@@ -42,10 +44,12 @@ class Invoices(Base):
     id = Column(Integer,primary_key=True)
     customer_id = Column(Integer,ForeignKey("customers.id"))
     date = Column(DateTime,default=datetime.now())
-    
 
-class InvoicesProducts(Base):
-    __tablename__ = "invoices_products"
+    customer = relation(Customers,backref=backref("invoices") )
+    products = relation("Products",secondary="invoice_product" )
+
+class InvoiceProduct(Base):
+    __tablename__ = "invoice_product"
     id = Column(Integer,primary_key=True)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product_id = Column(Integer,ForeignKey("products.id"))
