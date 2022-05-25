@@ -43,8 +43,7 @@ class Invoices(Base):
     __tablename__ = "invoices"
     id = Column(Integer,primary_key=True)
     customer_id = Column(Integer,ForeignKey("customers.id"))
-    date = Column(DateTime,default=datetime.now())
-
+    
     customer = relation(Customers,backref=backref("invoices") )
     products = relation("Products",secondary="invoice_product" )
 
