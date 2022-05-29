@@ -1,6 +1,6 @@
-id,fname,lname,mobile,email,password,ncode,address
-1,kiana,kiazad,9129423212,kianakiazad@gmail.com,12345,,"yazd,razmandegan"
-2,kamyar,kia ,9137625890,kamyarkia@gmail.com,65241,,"yazd,kh kashani"
-3,ali,dehghan,9132532781,alidehghan@gmail.com,87162,,"yazd,meydane alem"
-4,reza,zare,9142561341,rezazare@gmail.com,89182,,"yazd,shahidane ashraf"
-5,hasan,jafari,9131514235,hasanjafari@gmail.com,98172,,"yazd,kh ferdosi"
+fname,lname,mobile,email,password,ncode,address
+kiana,kiazad,9129423212,kianakiazad@gmail.com,12345,,"yazd,razmandegan"
+kamyar,kia ,9137625890,kamyarkia@gmail.com,65241,,"yazd,kh kashani"
+ali,dehghan,9132532781,alidehghan@gmail.com,87162,,"yazd,meydane alem"
+reza,zare,9142561341,rezazare@gmail.com,89182,,"yazd,shahidane ashraf"
+hasan,jafari,9131514235,hasanjafari@gmail.com,98172,,"yazd,kh ferdosi"

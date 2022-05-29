@@ -15,6 +15,6 @@ engine = create_engine(
 
 
 Session = sessionmaker(engine)
-dbsession = Session()
+# dbsession = Session()
 
 Base.metadata.create_all(engine)

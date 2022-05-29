@@ -1,7 +1,7 @@
 from email.policy import default
 from enum import unique
 from fnmatch import fnmatchcase
-from sqlalchemy import Column, Boolean, VARCHAR, ForeignKey, Text, Integer, Float, DateTime
+from sqlalchemy import DATETIME, Column, Boolean, VARCHAR, ForeignKey, Text, Integer, Float, DateTime
 from sqlalchemy.orm import declarative_base, relation, backref
 from datetime import datetime
 
@@ -43,6 +43,7 @@ class Invoices(Base):
     __tablename__ = "invoices"
     id = Column(Integer,primary_key=True)
     customer_id = Column(Integer,ForeignKey("customers.id"))
+    date = Column(DATETIME,default=datetime.now())
     
     customer = relation(Customers,backref=backref("invoices") )
     products = relation("Products",secondary="invoice_product" )
@@ -52,3 +53,4 @@ class InvoiceProduct(Base):
     id = Column(Integer,primary_key=True)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product_id = Column(Integer,ForeignKey("products.id"))
+    quantity = Column(Integer, default=1)
