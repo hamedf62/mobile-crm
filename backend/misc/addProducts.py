@@ -1,6 +1,6 @@
 from unicodedata import category, name
-from models import Categories, Customers, Invoices, Products
-from connection import dbsession
+from db.models import Categories, Customers, Invoices, Products
+from db.connection import dbsession
 
 # newCategories = [{"name":"Smart phones"},{"name":"Headsets"},{"name":"Battery Chargers"}]
 # newCustomers 
