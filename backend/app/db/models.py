@@ -1,8 +1,6 @@
-from email.policy import default
-from enum import unique
-from fnmatch import fnmatchcase
+
 from sqlalchemy import DATETIME, Column, Boolean,LargeBinary, VARCHAR, ForeignKey, Text, Integer, Float, DateTime
-from sqlalchemy.orm import declarative_base, relation, backref
+from sqlalchemy.orm import declarative_base, relationship, backref
 from datetime import datetime
 from bcrypt import hashpw, gensalt
 
@@ -34,7 +32,7 @@ class Users(Base):
         if plaintext:
             self._password = hashpw(plaintext.encode("utf-8"), gensalt())
    
-    category = relation(UsersCategories, backref=backref("users"))
+    category = relationship(UsersCategories, backref=backref("users"))
 
 class ProductsCategories(Base):
     __tablename__ = "products_categories"
@@ -49,9 +47,9 @@ class Products(Base):
     name = Column(VARCHAR)
     price = Column(Float)
 
-    category = relation(ProductsCategories,backref=backref("products"))
+    category = relationship(ProductsCategories,backref=backref("products"))
 
-    invoices = relation("Invoices",secondary="invoice_product" )
+    invoices = relationship("Invoices",secondary="invoice_product" )
 
 
 class Invoices(Base):
@@ -60,8 +58,8 @@ class Invoices(Base):
     customer_id = Column(Integer,ForeignKey("users.id"))
     date = Column(DATETIME,default=datetime.now())
     
-    customer = relation(Users,backref=backref("invoices") )
-    products = relation("Products",secondary="invoice_product" )
+    customer = relationship(Users,backref=backref("invoices") )
+    # products = relationship(Products,secondary="invoice_product" )
 
 class InvoiceProduct(Base):
     __tablename__ = "invoice_product"

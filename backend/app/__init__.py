@@ -2,7 +2,7 @@ from flask import Flask, jsonify, Blueprint
 from datetime import datetime, timedelta, time, date
 
 from flask_jwt_extended import JWTManager
-from app.routes import blueprint
+from backend.app.routes import blueprint
 
 
 def register_blueprints(app):

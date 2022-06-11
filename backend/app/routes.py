@@ -7,7 +7,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     jwt_required,
 )
-from app.schemas import UsersSchema
+from .schemas import UsersSchema
 import bcrypt
 from flask import Flask, jsonify, Blueprint
 

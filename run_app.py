@@ -1,7 +1,7 @@
 from sys import exit
 from decouple import config
-from app.config import config_dict
-from app import create_app
+from backend.app.config import config_dict
+from backend.app import create_app
 
 # from flask import g
 # from flask_cors import CORS

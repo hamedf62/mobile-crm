@@ -1,7 +1,7 @@
 # from attr import field
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import Schema, EXCLUDE, fields
-from db.models import *
+from .db.models import *
 from marshmallow_sqlalchemy import auto_field, SQLAlchemyAutoSchema
 
 

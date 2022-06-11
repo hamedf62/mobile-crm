@@ -92,3 +92,4 @@ sw.*
 # back end exceptions
 /backend/.venv
 /backend/venv
+.venv
