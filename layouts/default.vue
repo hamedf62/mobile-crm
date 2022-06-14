@@ -81,6 +81,11 @@ export default {
           title: 'Inspire',
           to: '/inspire',
         },
+        {
+          icon: 'mdi-login',
+          title: 'Login',
+          to: '/auth/login',
+        },
       ],
       miniVariant: false,
       right: true,
