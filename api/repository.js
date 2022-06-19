@@ -1,16 +1,16 @@
 // Provide nuxt-axios instance to use same configuration across the whole project
 // I've used typical CRUD method names and actions here
 
-import objectToFormData from "./objectToFormData";
+import objectToFormData from './objectToFormData'
 
 export default ($axios, $store, $swal, i18n) => (resource) => ({
   index(params) {
     // console.log(params)
-    let req_params = {};
+    let req_params = {}
     if (params) {
-      req_params = { params: { params } };
+      req_params = { params: { params } }
     }
-    return $axios.$get(`${resource}`, req_params);
+    return $axios.$get(`${resource}`, req_params)
   },
 
   show(id, params) {
@@ -19,23 +19,23 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
         params,
         // timestamp: new Date().getTime(),
       },
-    });
+    })
   },
 
-  create(payload, customRoute = "") {
+  create(payload, customRoute = '') {
     if (payload.data) {
-      payload = objectToFormData(payload.data);
+      payload = objectToFormData(payload.data)
     }
     // payload.timestamp = new Date().getTime()
-    return $axios.$post(`${resource}${customRoute}`, payload);
+    return $axios.$post(`${resource}${customRoute}`, payload)
   },
 
   update(id, payload) {
     if (payload.data) {
-      payload = objectToFormData(payload.data);
+      payload = objectToFormData(payload.data)
     }
 
-    return $axios.$patch(`${resource}/${id}`, payload);
+    return $axios.$patch(`${resource}/${id}`, payload)
   },
 
   async delete(id, confirm = false) {
@@ -43,7 +43,7 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
     await $axios
       .$delete(`${resource}/${id}`, {
         params: {
-          confirm: confirm,
+          confirm,
         },
       })
       .then(async (response) => {
@@ -51,10 +51,12 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
           .fire({
             title: i18n.t(response.meta.message.text),
             // imageUrl: '/img/Loader.gif',
-            icon: "warning",
+            icon: 'warning',
             // showDenyButton: true,
             showCancelButton: true,
-            confirmButtonColor: response.meta.message.color ? response.meta.message.color : "red",
+            confirmButtonColor: response.meta.message.color
+              ? response.meta.message.color
+              : 'red',
             confirmButtonText: i18n.t(response.meta.message.action),
             // denyButtonText: i18n.t(`Don't Delete`),
             cancelButtonText: i18n.t(`actions.cancel`),
@@ -65,7 +67,7 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
                 params: {
                   confirm: true,
                 },
-              });
+              })
               // app.$swal.fire('Saved!', '', 'success')
             }
             // else if (result.isDenied) {
@@ -73,8 +75,8 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
             //   // app.$swal.fire('Changes are not saved', '', 'info')
             //   // throw new Cancel()
             // }
-          });
-      });
+          })
+      })
 
     // return
   },
@@ -84,7 +86,7 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
       params: {
         params,
       },
-    });
+    })
   },
   moveNode(params) {
     return $axios.$patch(`${resource}/${params.source.id}/move`, {
@@ -92,13 +94,13 @@ export default ($axios, $store, $swal, i18n) => (resource) => ({
       parent_id: params.destination ? params.destination.id : null,
       position: params.position,
       // },
-    });
+    })
   },
   getNodes(params) {
     return $axios.$get(`${resource}/getNodes`, {
       params: {
         params,
       },
-    });
+    })
   },
-});
+})

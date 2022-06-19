@@ -8,5 +8,5 @@ export default (ctx, inject) => {
     ctx.$swal,
     ctx.i18n
   )
-  inject('runs', repositoryWithAxios('api/v1/runs'))
+  inject('products', repositoryWithAxios('api/v1/products'))
 }

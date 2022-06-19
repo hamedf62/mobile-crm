@@ -20,6 +20,7 @@
 
 <script>
 export default {
+  auth: false,
   name: 'IndexPage',
 }
 </script>

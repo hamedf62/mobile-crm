@@ -72,7 +72,9 @@
 <script>
 import VueJsonToCsv from 'vue-json-to-csv'
 export default {
+  auth: false,
   components: { VueJsonToCsv },
+  layout: 'dashboard',
   data() {
     return {
       value: [],
@@ -112,9 +114,9 @@ export default {
       ],
     }
   },
-  async fetch() {
+  fetch() {
     this.refresh()
-    // const ordersData = await app.$orders.show(
+    // const ordersData = await app.$products.show(
     //   `${params.runType}/${params.id}/${params.slug}`
     // );
     // const tradingAssetsData = await app.$runTradingAssets.show(
@@ -128,7 +130,7 @@ export default {
     // };
   },
   // async asyncData({ params, app }) {
-  //   const response = await app.$orders.show(`${params.runType}/${params.id}/${params.slug}`);
+  //   const response = await app.$products.show(`${params.runType}/${params.id}/${params.slug}`);
   //   const responseTAssets = await app.$runTradingAssets.show(`${params.runType}/${params.id}`);
   //   return {
   //     orders: response.data,
@@ -154,23 +156,20 @@ export default {
   methods: {
     async refresh() {
       // this.$fetch();
-      const ordersData = await this.$orders.show(
+      const ordersData = await this.$products.show(
         `${this.$route.params.runType}/${this.$route.params.id}/${this.$route.params.slug}`
       )
-      const tradingAssetsData = await this.$runTradingAssets.show(
-        `${this.$route.params.runType}/${this.$route.params.id}`
-      )
+
       this.orders = ordersData.data
-      this.tradingAssets = tradingAssetsData.data.assets.sort()
     },
     itemRowBackground(item) {
       return [1, 3].includes(item.type)
-        ? item.executed_qty == 0
+        ? item.executed_qty === 0
           ? 'style-buy-not-executed'
           : item.buy_remain_executed_qty > 0
           ? 'style-buy-executed-open'
           : 'style-buy-executed-close'
-        : item.executed_qty == 0
+        : item.executed_qty === 0
         ? 'style-sell-not-executed'
         : 'style-sell-executed'
     },

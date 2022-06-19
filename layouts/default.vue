@@ -1,5 +1,5 @@
 <template>
-  <v-app dark>
+  <v-app>
     <v-navigation-drawer
       v-model="drawer"
       :mini-variant="miniVariant"
@@ -86,6 +86,7 @@ export default {
           title: 'Login',
           to: '/auth/login',
         },
+        { icon: 'mdi-dolly', title: 'products', to: '/products' },
       ],
       miniVariant: false,
       right: true,
