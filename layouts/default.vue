@@ -42,7 +42,7 @@
       </v-btn>
     </v-app-bar>
     <v-main>
-      <v-container>
+      <v-container flex>
         <Nuxt />
       </v-container>
     </v-main>

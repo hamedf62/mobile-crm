@@ -40,12 +40,86 @@ export default {
   modules: [
     // https://go.nuxtjs.dev/axios
     '@nuxtjs/axios',
+    '@nuxtjs/auth-next',
+    '@nuxtjs/i18n',
+    'nuxt-highcharts',
   ],
 
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
-  axios: {
-    // Workaround to avoid enforcing hard-coded localhost:3000: https://github.com/nuxt-community/axios-module/issues/308
-    baseURL: '/',
+  axios: { proxy: true, credentials: true },
+  proxy: {
+    '/api/v1/': {
+      target:
+        process.env.NODE_ENV === 'dev'
+          ? process.env.DEV_BASE_URL
+          : process.env.PRODUCTION_BASE_URL,
+    },
+    // process.env.NODE_ENV === "dev" ? process.env.DEV_BASE_URL : process.env.PRODUCTION_BASE_URL,
+    // pathRewrite: { "^/api/": "" },
+    changeOrigin: true,
+  },
+
+  auth: {
+    scopeKey: 'roles',
+    rewriteRedirects: true,
+    strategies: {
+      local: {
+        scheme: 'refresh',
+        token: {
+          property: 'meta.access_token',
+          maxAge: 1800,
+          global: true,
+          type: 'Bearer',
+        },
+        refreshToken: {
+          property: 'meta.refresh_token',
+          data: 'refresh_token',
+          maxAge: 60 * 60 * 24 * 30,
+        },
+        user: {
+          property: 'data',
+          // autoFetch: true
+        },
+        // url: "api",
+        endpoints: {
+          login: { url: 'api/v1/auth/login', method: 'post' },
+          refresh: { url: 'api/v1/auth/refresh', method: 'post' },
+          user: { url: 'api/v1/auth/user', method: 'get' },
+          logout: { url: 'api/v1/auth/logout', method: 'post' },
+        },
+        // autoLogout: false
+      },
+    },
+    redirect: {
+      login: '/auth/login',
+      logout: '/',
+      callback: '/auth/login',
+      home: '/',
+    },
+  },
+
+  i18n: {
+    lazy: true,
+    langDir: '~/locales/',
+    detectBrowserLanguage: false,
+    strategy: 'no_prefix',
+    vueI18nLoader: true,
+    defaultLocale: 'fa',
+
+    locales: [
+      {
+        code: 'en',
+        name: 'English',
+        iso: 'en-US',
+        file: 'en.json',
+      },
+      {
+        code: 'fa',
+        name: 'Farsi',
+        iso: 'fa-IR',
+        file: 'fa.json',
+      },
+    ],
   },
 
   // Vuetify module configuration: https://go.nuxtjs.dev/config-vuetify

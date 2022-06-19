@@ -1,30 +1,36 @@
 <template>
-  <v-flex md12 md4>
-    <v-form ref="loginForm" @submit.prevent="userLogin">
+  <!-- <v-flex md12 md4> -->
+  <v-row align="center" justify="center">
+    <v-col cols="4">
       <v-card elevation="12" color="blue">
-        <v-toolbar dark color="orange">
-          <v-toolbar-title>Login form</v-toolbar-title>
-        </v-toolbar>
-        <v-card-text>
-          <v-text-field
-            v-model="login.email"
-            prepend-icon="mdi-account"
-            label="Email"
-            type="text"
-          ></v-text-field>
-          <v-text-field
-            v-model="login.password"
-            prepend-icon="mdi-lock"
-            label="Password"
-            type="password"
-          ></v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn class="mr-4" type="submit">Login</v-btn>
-        </v-card-actions>
+        <v-form ref="loginForm" @submit.prevent="userLogin">
+          <v-toolbar dark color="orange">
+            <v-toolbar-title>Login form</v-toolbar-title>
+          </v-toolbar>
+          <v-card-text>
+            <v-text-field
+              v-model="login.email"
+              prepend-icon="mdi-account"
+              label="Email"
+              type="text"
+            ></v-text-field>
+            <v-text-field
+              v-model="login.password"
+              prepend-icon="mdi-lock"
+              label="Password"
+              type="password"
+            ></v-text-field>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn type="submit">Login</v-btn>
+            <v-spacer />
+            <v-btn type="submit" text>Forgot Password</v-btn>
+          </v-card-actions>
+        </v-form>
       </v-card>
-    </v-form>
-  </v-flex>
+    </v-col>
+  </v-row>
+  <!-- </v-flex> -->
 </template>
 
 <script>

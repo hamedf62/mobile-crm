@@ -1,0 +1,30 @@
+{
+  "enums": {
+    "runs": {
+      "0": "Backtest",
+      "1": "Live"
+    },
+    "orders": {
+      "1": "Deposit",
+      "2": "Withdraw",
+      "3": "Buy",
+      "4": "Sell"
+    },
+    "ledgers": {
+      "1": "Deposit",
+      "2": "Withdraw"
+    },
+    "trades": {
+      "1": "Deposit",
+      "2": "Withdraw",
+      "3": "Buy",
+      "4": "Sell"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "success login": "Success Login",
+    "logout": "LogOut",
+    "success logout": "Success Logout"
+  }
+}
