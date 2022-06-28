@@ -9,4 +9,5 @@ export default (ctx, inject) => {
     ctx.i18n
   )
   inject('products', repositoryWithAxios('api/v1/products'))
+  inject('users', repositoryWithAxios('api/v1/auth/users'))
 }

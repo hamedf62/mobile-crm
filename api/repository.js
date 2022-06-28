@@ -4,13 +4,13 @@
 import objectToFormData from './objectToFormData'
 
 export default ($axios, $store, $swal, i18n) => (resource) => ({
-  index(params) {
+  index() {
     // console.log(params)
-    let req_params = {}
-    if (params) {
-      req_params = { params: { params } }
-    }
-    return $axios.$get(`${resource}`, req_params)
+    // let req_params = {}
+    // if (params) {
+    //   req_params = { params: { params } }
+    // }
+    return $axios.$get(`${resource}`)
   },
 
   show(id, params) {

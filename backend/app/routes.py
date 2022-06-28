@@ -10,13 +10,16 @@ from flask_jwt_extended import (
 from .schemas import UsersSchema
 import bcrypt
 from flask import Flask, jsonify, Blueprint
+from ..db.connection import Session
+from ..db.models import *
+import pandas as pd
 
 blueprint = Blueprint(
     "api",
     __name__,
 )
 
-def mkresp(data=None, meta=None, type=200, **kwargs):
+def mkresp(data=None, meta=None, type=202, **kwargs):
     output = {}
     if data:
         output["data"] = data
@@ -107,10 +110,17 @@ def refresh():
     return mkresp(meta={"access_token": access_token}, type=202)
 
 
-@blueprint.route("products/<int:product_id>")
+@blueprint.route("products")
 # @jwt_required()
-def orders(product_id):
-    
-    # return mkresp(data=OrdersSchema(many=True).dump(orders_with_PNL))
-    return mkresp(data=f"this is {product_id}.")
+def products():
+
+    # mydata = [{"name":"apple","type":13},{"name":"Samsung","type":"S20"},{"name":"Shiaomy","type":100}]
+
+    dbsession = Session()
+    allProducts = dbsession.query(Products)
+    allProducts = pd.read_sql(allProducts.statement, dbsession.connection())
+    # print(allProducts)
+    allProducts = allProducts.to_dict(orient="records")
+
+    return mkresp(data=allProducts)
 
