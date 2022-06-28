@@ -83,7 +83,12 @@ export default {
         },
         {
           icon: 'mdi-login',
-          title: 'Login',
+          title: 'Customer Login',
+          to: '/auth/login',
+        },
+        {
+          icon: 'mdi-login',
+          title: 'Store Login',
           to: '/auth/login',
         },
         { icon: 'mdi-dolly', title: 'products', to: '/products' },

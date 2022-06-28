@@ -1,56 +1,57 @@
 <template>
-  <v-app>
-    <v-btn @click="drawer = !drawer">
-      <v-icon>mdi-pin</v-icon>
-      show the menu
-    </v-btn>
+  <v-card height="350px">
     <v-navigation-drawer
-      v-model="drawer"
-      :mini-variant="miniVariant"
-      :clipped="clipped"
-      fixed
-      app
-      color="blue"
+      absolute
+      permanent
+      right
     >
-      <v-list>
-        <v-list-item
-          v-for="(item, i) in items"
-          :key="i"
-          :to="item.to"
-          router
-          exact
-        >
-          <v-list-item-action>
-            <v-icon>{{ item.icon }}</v-icon>
-          </v-list-item-action>
+      <template v-slot:prepend>
+        <v-list-item two-line>
+          <v-list-item-avatar>
+            <img src="">
+          </v-list-item-avatar>
+
           <v-list-item-content>
-            <v-list-item-title v-text="item.title" />
+            <v-list-item-title>name</v-list-item-title>
+            <v-list-item-subtitle>Logged In</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+      </template>
+
+      <v-divider></v-divider>
+
+      <v-list dense>
+        <v-list-item
+          v-for="item in items"
+          :key="item.title"
+        >
+          <v-list-item-icon>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-item-icon>
+     <v-main>
+      <v-container flex>
+        <Nuxt />
+      </v-container>
+     </v-main>
+          <v-list-item-content>
+            <v-list-item-title>{{ item.title }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
-    <p>this is test layout only</p>
-    <v-main>
-      <v-container flex>
-        <Nuxt />
-      </v-container>
-    </v-main>
-  </v-app>
+  </v-card>
 </template>
 
 <script>
-export default {
-  data: () => ({
-    clipped: true,
-    drawer: false,
-    miniVariant: false,
-    items: [
-      {
-        icon: 'mdi-face-man-profile',
-        title: 'Profile',
-        to: '/profile',
-      },
-    ],
-  }),
-}
+  export default {
+    data () {
+      return {
+        items: [
+          { title: 'Profile', icon: 'mdi-face-man-profile'},
+          { title: 'Gift Code', icon: 'mdi-gift' },
+          { title: 'Credit Card', icon: 'mdi-credit-card' },
+        ],
+      }
+    },
+  }
 </script>
