@@ -124,3 +124,12 @@ def products():
 
     return mkresp(data=allProducts)
 
+@blueprint.route("users")
+def users():
+
+    dbsession = Session()
+    allUsers = dbsession.query(Users)
+    allUsers = pd.read_sql(allUsers.statement, dbsession.connection())
+    allUsers = allUsers.to_dict(orient="records")
+
+    return mkresp(data=allUsers)
