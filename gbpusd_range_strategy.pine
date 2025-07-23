@@ -1,0 +1,177 @@
+//@version=6
+strategy("GBP/USD Range Strategy", overlay=true, initial_capital=100, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.05)
+
+// Input parameters
+initial_trade_size = input.float(40.0, title="Initial Trade Size ($)", minval=1.0)
+position_increase = input.float(20.0, title="Position Size Increase (%)", minval=0.0) / 100
+
+// Session definitions (EDT timezone, UTC-4)
+london_session = input.session("0800-1000", title="London Session (4:00-6:00 AM EDT)")
+ny_session = input.session("1300-1500", title="New York Session (9:00-11:00 AM EDT)")
+
+// Variables for range detection
+var float range_high = na
+var float range_low = na
+var int range_candles = 0
+var bool range_detected = false
+var bool trade_taken_today = false
+var int daily_reset = 0
+
+// Variables for Fibonacci levels
+var float fib_high = na
+var float fib_low = na
+var float fib_0 = na
+var float fib_50 = na
+var float fib_618 = na
+var float fib_100 = na
+
+// Variables for tracking breakout scenarios
+var bool shadow_break_setup = false
+var bool body_break_setup = false
+var bool waiting_for_retracement = false
+var float breakout_high = na
+var int shadow_candle_index = na
+
+// Position sizing variables
+var int trade_count = 0
+
+// Function to check if we're in a trading session
+is_london_session() => time(timeframe.period, london_session)
+is_ny_session() => time(timeframe.period, ny_session)
+is_trading_session() => is_london_session() or is_ny_session()
+
+// Function to check if it's a new trading day
+is_new_day() => ta.change(dayofweek) != 0 or (dayofweek != dayofweek[1] and dayofweek[1] != 0)
+
+// Reset daily variables
+if is_new_day()
+    range_high := na
+    range_low := na
+    range_candles := 0
+    range_detected := false
+    trade_taken_today := false
+    shadow_break_setup := false
+    body_break_setup := false
+    waiting_for_retracement := false
+    breakout_high := na
+    shadow_candle_index := na
+    fib_high := na
+    fib_low := na
+
+// Detect range during first 4 candles of each session
+if is_trading_session() and not range_detected and not trade_taken_today
+    if na(range_high) or na(range_low)
+        range_high := high
+        range_low := low
+        range_candles := 1
+    else if range_candles < 4
+        range_high := math.max(range_high, high)
+        range_low := math.min(range_low, low)
+        range_candles += 1
+    else if range_candles == 4
+        range_detected := true
+
+// Plot range levels
+plot(range_detected ? range_high : na, color=color.red, linewidth=2, title="Range High")
+plot(range_detected ? range_low : na, color=color.green, linewidth=2, title="Range Low")
+
+// Check for range breaks after range is detected
+if range_detected and is_trading_session() and not trade_taken_today
+
+    // Check for ceiling break
+    if high > range_high and not shadow_break_setup and not body_break_setup and not waiting_for_retracement
+        
+        // Scenario 1: Shadow break (body closes inside range)
+        if close <= range_high
+            shadow_break_setup := true
+            shadow_candle_index := bar_index
+            
+        // Scenario 2: Body break (body closes outside range)
+        else if close > range_high
+            body_break_setup := true
+            waiting_for_retracement := true
+            breakout_high := high
+            // Set up Fibonacci levels
+            fib_low := range_low
+            fib_high := breakout_high
+            fib_0 := fib_high
+            fib_50 := fib_high - (fib_high - fib_low) * 0.5
+            fib_618 := fib_high - (fib_high - fib_low) * 0.618
+            fib_100 := fib_low
+
+// Plot Fibonacci levels when applicable
+plot(body_break_setup and not na(fib_0) ? fib_0 : na, color=color.purple, linewidth=1, title="Fib 0%")
+plot(body_break_setup and not na(fib_50) ? fib_50 : na, color=color.orange, linewidth=1, title="Fib 50%")
+plot(body_break_setup and not na(fib_618) ? fib_618 : na, color=color.yellow, linewidth=1, title="Fib 61.8%")
+plot(body_break_setup and not na(fib_100) ? fib_100 : na, color=color.blue, linewidth=1, title="Fib 100%")
+
+// Calculate position size with compounding
+calculate_position_size() =>
+    if trade_count == 0
+        initial_trade_size
+    else
+        initial_trade_size * math.pow(1 + position_increase, trade_count)
+
+// Entry conditions
+var float entry_price = na
+var float stop_loss = na
+var float take_profit = na
+
+// Scenario 1: Shadow break entry
+if shadow_break_setup and not trade_taken_today and is_trading_session()
+    if bar_index > shadow_candle_index
+        entry_price := close
+        stop_loss := high[1] // Above the shadow candle high
+        risk = entry_price - stop_loss
+        take_profit := entry_price + risk // 1:1 RR
+        
+        pos_size = calculate_position_size()
+        strategy.entry("Sell_Shadow", strategy.short, qty=pos_size/entry_price)
+        strategy.exit("Exit_Shadow", "Sell_Shadow", stop=stop_loss, limit=take_profit)
+        
+        trade_taken_today := true
+        trade_count += 1
+        shadow_break_setup := false
+
+// Scenario 2: Body break and retracement entry
+if body_break_setup and waiting_for_retracement and not trade_taken_today and is_trading_session()
+    // Check if price has retracted back into range and closed below 50% Fib
+    if close <= range_high and close < fib_50
+        entry_price := close
+        // Stop loss above the high of previous two candles
+        stop_loss := math.max(high[1], high[2])
+        risk = stop_loss - entry_price
+        take_profit := entry_price - risk // 1:1 RR
+        
+        pos_size = calculate_position_size()
+        strategy.entry("Sell_Fib", strategy.short, qty=pos_size/entry_price)
+        strategy.exit("Exit_Fib", "Sell_Fib", stop=stop_loss, limit=take_profit)
+        
+        trade_taken_today := true
+        trade_count += 1
+        body_break_setup := false
+        waiting_for_retracement := false
+
+// Visual indicators
+plotshape(shadow_break_setup and bar_index == shadow_candle_index, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, title="Shadow Break")
+plotshape(body_break_setup and waiting_for_retracement, style=shape.triangleup, location=location.belowbar, color=color.orange, size=size.small, title="Body Break")
+
+// Background coloring for trading sessions
+bgcolor(is_london_session() ? color.new(color.blue, 95) : na, title="London Session")
+bgcolor(is_ny_session() ? color.new(color.purple, 95) : na, title="New York Session")
+
+// Information table
+if barstate.islast
+    var table info_table = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)
+    table.cell(info_table, 0, 0, "Total Trades", text_color=color.black)
+    table.cell(info_table, 1, 0, str.tostring(trade_count), text_color=color.black)
+    table.cell(info_table, 0, 1, "Current Range High", text_color=color.black)
+    table.cell(info_table, 1, 1, range_detected ? str.tostring(range_high, "#.#####") : "N/A", text_color=color.black)
+    table.cell(info_table, 0, 2, "Current Range Low", text_color=color.black)
+    table.cell(info_table, 1, 2, range_detected ? str.tostring(range_low, "#.#####") : "N/A", text_color=color.black)
+    table.cell(info_table, 0, 3, "Range Detected", text_color=color.black)
+    table.cell(info_table, 1, 3, range_detected ? "Yes" : "No", text_color=color.black)
+    table.cell(info_table, 0, 4, "Trade Taken Today", text_color=color.black)
+    table.cell(info_table, 1, 4, trade_taken_today ? "Yes" : "No", text_color=color.black)
+    table.cell(info_table, 0, 5, "Current Position Size", text_color=color.black)
+    table.cell(info_table, 1, 5, "$" + str.tostring(calculate_position_size(), "#.##"), text_color=color.black)
