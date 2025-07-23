@@ -16,6 +16,7 @@ var int range_candles = 0
 var bool range_detected = false
 var bool trade_taken_today = false
 var int session_start_time = 0
+var bool session_active = false
 
 // Variables for Fibonacci levels
 var float fib_high = na
@@ -31,9 +32,10 @@ var bool body_break_setup = false
 var bool waiting_for_retracement = false
 var float breakout_high = na
 var int shadow_candle_index = na
+var float shadow_candle_high = na
 
-// Position sizing variables
-var int trade_count = 0
+// Position sizing variables (persist across sessions but reset daily)
+var int daily_trade_count = 0
 
 // Function to check if we're in a trading session
 is_london_session() => not na(time(timeframe.period, london_session))
@@ -49,10 +51,10 @@ is_session_start() =>
     ny_start = not na(time(timeframe.period, ny_session)) and na(time(timeframe.period, ny_session)[1])
     london_start or ny_start
 
-// Reset daily variables
+// Reset daily variables (preserve trade count for compounding)
 if is_new_day()
     trade_taken_today := false
-    trade_count := 0
+    daily_trade_count := 0
 
 // Reset session variables at start of new session
 if is_session_start()
@@ -65,12 +67,18 @@ if is_session_start()
     waiting_for_retracement := false
     breakout_high := na
     shadow_candle_index := na
+    shadow_candle_high := na
     fib_high := na
     fib_low := na
-    session_start_time := time
+    session_start_time := math.round(time / 60000) // Store in minutes for easier calculation
+    session_active := true
+
+// Track when session ends
+if session_active and not is_trading_session()
+    session_active := false
 
 // Detect range during first 4 candles of each session
-if is_trading_session() and not range_detected and not trade_taken_today
+if is_trading_session() and not range_detected and not trade_taken_today and session_active
     if na(range_high) or na(range_low)
         range_high := high
         range_low := low
@@ -84,13 +92,14 @@ if is_trading_session() and not range_detected and not trade_taken_today
         range_detected := true
 
 // Plot range levels
-plot(range_detected ? range_high : na, color=color.red, linewidth=2, title="Range High")
-plot(range_detected ? range_low : na, color=color.green, linewidth=2, title="Range Low")
+plot(range_detected and session_active ? range_high : na, color=color.red, linewidth=2, title="Range High")
+plot(range_detected and session_active ? range_low : na, color=color.green, linewidth=2, title="Range Low")
 
 // Check for range breaks after range is detected
-if range_detected and is_trading_session() and not trade_taken_today
-    // Only trade within first 2 hours of session (24 candles on 5min chart)
-    time_since_session = math.round((time - session_start_time) / 60000) // Convert to minutes
+if range_detected and is_trading_session() and not trade_taken_today and session_active
+    // Only trade within first 2 hours of session
+    current_time = math.round(time / 60000)
+    time_since_session = current_time - session_start_time
     
     if time_since_session <= 120 // Within 2 hours
         // Check for ceiling break
@@ -100,6 +109,7 @@ if range_detected and is_trading_session() and not trade_taken_today
             if close <= range_high
                 shadow_break_setup := true
                 shadow_candle_index := bar_index
+                shadow_candle_high := high // Store the actual high of shadow candle
                 
             // Scenario 2: Body break (body closes outside range)
             else if close > range_high
@@ -115,17 +125,17 @@ if range_detected and is_trading_session() and not trade_taken_today
                 fib_100 := fib_low
 
 // Plot Fibonacci levels when applicable
-plot(body_break_setup and not na(fib_0) ? fib_0 : na, color=color.purple, linewidth=1, title="Fib 0%")
-plot(body_break_setup and not na(fib_50) ? fib_50 : na, color=color.orange, linewidth=1, title="Fib 50%")
-plot(body_break_setup and not na(fib_618) ? fib_618 : na, color=color.yellow, linewidth=1, title="Fib 61.8%")
-plot(body_break_setup and not na(fib_100) ? fib_100 : na, color=color.blue, linewidth=1, title="Fib 100%")
+plot(body_break_setup and session_active and not na(fib_0) ? fib_0 : na, color=color.purple, linewidth=1, title="Fib 0%")
+plot(body_break_setup and session_active and not na(fib_50) ? fib_50 : na, color=color.orange, linewidth=1, title="Fib 50%")
+plot(body_break_setup and session_active and not na(fib_618) ? fib_618 : na, color=color.yellow, linewidth=1, title="Fib 61.8%")
+plot(body_break_setup and session_active and not na(fib_100) ? fib_100 : na, color=color.blue, linewidth=1, title="Fib 100%")
 
 // Calculate position size with compounding
 calculate_position_size() =>
-    if trade_count == 0
+    if daily_trade_count == 0
         initial_trade_size
     else
-        initial_trade_size * math.pow(1 + position_increase, trade_count)
+        initial_trade_size * math.pow(1 + position_increase, daily_trade_count)
 
 // Entry conditions
 var float entry_price = na
@@ -133,26 +143,31 @@ var float stop_loss = na
 var float take_profit = na
 
 // Scenario 1: Shadow break entry
-if shadow_break_setup and not trade_taken_today and is_trading_session()
-    time_since_session = math.round((time - session_start_time) / 60000)
+if shadow_break_setup and not trade_taken_today and is_trading_session() and session_active
+    current_time = math.round(time / 60000)
+    time_since_session = current_time - session_start_time
     
     if bar_index > shadow_candle_index and time_since_session <= 120
         entry_price := close
-        stop_loss := high[1] // Above the shadow candle high
+        stop_loss := shadow_candle_high // Use stored shadow candle high
         risk = math.abs(stop_loss - entry_price)
         take_profit := entry_price - risk // 1:1 RR for short trade
         
-        pos_size = calculate_position_size()
-        strategy.entry("Sell_Shadow", strategy.short, qty=pos_size/close)
-        strategy.exit("Exit_Shadow", "Sell_Shadow", stop=stop_loss, limit=take_profit)
-        
-        trade_taken_today := true
-        trade_count += 1
-        shadow_break_setup := false
+        // Ensure valid risk/reward
+        if risk > 0 and take_profit < entry_price
+            pos_size = calculate_position_size()
+            shares = pos_size / close
+            strategy.entry("Sell_Shadow", strategy.short, qty=shares)
+            strategy.exit("Exit_Shadow", "Sell_Shadow", stop=stop_loss, limit=take_profit)
+            
+            trade_taken_today := true
+            daily_trade_count += 1
+            shadow_break_setup := false
 
 // Scenario 2: Body break and retracement entry
-if body_break_setup and waiting_for_retracement and not trade_taken_today and is_trading_session()
-    time_since_session = math.round((time - session_start_time) / 60000)
+if body_break_setup and waiting_for_retracement and not trade_taken_today and is_trading_session() and session_active
+    current_time = math.round(time / 60000)
+    time_since_session = current_time - session_start_time
     
     // Check if price has retracted back into range and closed below 50% Fib
     if close <= range_high and close < fib_50 and time_since_session <= 120
@@ -162,14 +177,17 @@ if body_break_setup and waiting_for_retracement and not trade_taken_today and is
         risk = math.abs(stop_loss - entry_price)
         take_profit := entry_price - risk // 1:1 RR for short trade
         
-        pos_size = calculate_position_size()
-        strategy.entry("Sell_Fib", strategy.short, qty=pos_size/close)
-        strategy.exit("Exit_Fib", "Sell_Fib", stop=stop_loss, limit=take_profit)
-        
-        trade_taken_today := true
-        trade_count += 1
-        body_break_setup := false
-        waiting_for_retracement := false
+        // Ensure valid risk/reward
+        if risk > 0 and take_profit < entry_price
+            pos_size = calculate_position_size()
+            shares = pos_size / close
+            strategy.entry("Sell_Fib", strategy.short, qty=shares)
+            strategy.exit("Exit_Fib", "Sell_Fib", stop=stop_loss, limit=take_profit)
+            
+            trade_taken_today := true
+            daily_trade_count += 1
+            body_break_setup := false
+            waiting_for_retracement := false
 
 // Visual indicators
 plotshape(shadow_break_setup and bar_index == shadow_candle_index, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, title="Shadow Break")
@@ -181,9 +199,9 @@ bgcolor(is_ny_session() ? color.new(color.purple, 95) : na, title="New York Sess
 
 // Information table
 if barstate.islast
-    var table info_table = table.new(position.top_right, 2, 7, bgcolor=color.white, border_width=1)
-    table.cell(info_table, 0, 0, "Total Trades", text_color=color.black)
-    table.cell(info_table, 1, 0, str.tostring(trade_count), text_color=color.black)
+    var table info_table = table.new(position.top_right, 2, 8, bgcolor=color.white, border_width=1)
+    table.cell(info_table, 0, 0, "Daily Trades", text_color=color.black)
+    table.cell(info_table, 1, 0, str.tostring(daily_trade_count), text_color=color.black)
     table.cell(info_table, 0, 1, "Current Range High", text_color=color.black)
     table.cell(info_table, 1, 1, range_detected ? str.tostring(range_high, "#.#####") : "N/A", text_color=color.black)
     table.cell(info_table, 0, 2, "Current Range Low", text_color=color.black)
@@ -192,7 +210,10 @@ if barstate.islast
     table.cell(info_table, 1, 3, range_detected ? "Yes" : "No", text_color=color.black)
     table.cell(info_table, 0, 4, "Trade Taken Today", text_color=color.black)
     table.cell(info_table, 1, 4, trade_taken_today ? "Yes" : "No", text_color=color.black)
-    table.cell(info_table, 0, 5, "Current Position Size", text_color=color.black)
-    table.cell(info_table, 1, 5, "$" + str.tostring(calculate_position_size(), "#.##"), text_color=color.black)
-    table.cell(info_table, 0, 6, "Session Time (min)", text_color=color.black)
-    table.cell(info_table, 1, 6, session_start_time > 0 ? str.tostring(math.round((time - session_start_time) / 60000)) : "N/A", text_color=color.black)
+    table.cell(info_table, 0, 5, "Session Active", text_color=color.black)
+    table.cell(info_table, 1, 5, session_active ? "Yes" : "No", text_color=color.black)
+    table.cell(info_table, 0, 6, "Current Position Size", text_color=color.black)
+    table.cell(info_table, 1, 6, "$" + str.tostring(calculate_position_size(), "#.##"), text_color=color.black)
+    table.cell(info_table, 0, 7, "Session Time (min)", text_color=color.black)
+    current_session_time = session_active and session_start_time > 0 ? math.round(time / 60000) - session_start_time : 0
+    table.cell(info_table, 1, 7, session_active ? str.tostring(current_session_time) : "N/A", text_color=color.black)
