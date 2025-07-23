@@ -70,7 +70,7 @@ if is_session_start()
     shadow_candle_high := na
     fib_high := na
     fib_low := na
-    session_start_time := math.round(time / 60000) // Store in minutes for easier calculation
+    session_start_time := math.round(time / 60000)
     session_active := true
 
 // Track when session ends
@@ -97,26 +97,19 @@ plot(range_detected and session_active ? range_low : na, color=color.green, line
 
 // Check for range breaks after range is detected
 if range_detected and is_trading_session() and not trade_taken_today and session_active
-    // Only trade within first 2 hours of session
     current_time = math.round(time / 60000)
     time_since_session = current_time - session_start_time
     
-    if time_since_session <= 120 // Within 2 hours
-        // Check for ceiling break
+    if time_since_session <= 120
         if high > range_high and not shadow_break_setup and not body_break_setup and not waiting_for_retracement
-            
-            // Scenario 1: Shadow break (body closes inside range)
             if close <= range_high
                 shadow_break_setup := true
                 shadow_candle_index := bar_index
-                shadow_candle_high := high // Store the actual high of shadow candle
-                
-            // Scenario 2: Body break (body closes outside range)
+                shadow_candle_high := high
             else if close > range_high
                 body_break_setup := true
                 waiting_for_retracement := true
                 breakout_high := high
-                // Set up Fibonacci levels
                 fib_low := range_low
                 fib_high := breakout_high
                 fib_0 := fib_high
@@ -124,7 +117,7 @@ if range_detected and is_trading_session() and not trade_taken_today and session
                 fib_618 := fib_high - (fib_high - fib_low) * 0.618
                 fib_100 := fib_low
 
-// Plot Fibonacci levels when applicable
+// Plot Fibonacci levels
 plot(body_break_setup and session_active and not na(fib_0) ? fib_0 : na, color=color.purple, linewidth=1, title="Fib 0%")
 plot(body_break_setup and session_active and not na(fib_50) ? fib_50 : na, color=color.orange, linewidth=1, title="Fib 50%")
 plot(body_break_setup and session_active and not na(fib_618) ? fib_618 : na, color=color.yellow, linewidth=1, title="Fib 61.8%")
@@ -149,11 +142,10 @@ if shadow_break_setup and not trade_taken_today and is_trading_session() and ses
     
     if bar_index > shadow_candle_index and time_since_session <= 120
         entry_price := close
-        stop_loss := shadow_candle_high // Use stored shadow candle high
+        stop_loss := shadow_candle_high
         risk = math.abs(stop_loss - entry_price)
-        take_profit := entry_price - risk // 1:1 RR for short trade
+        take_profit := entry_price - risk
         
-        // Ensure valid risk/reward
         if risk > 0 and take_profit < entry_price
             pos_size = calculate_position_size()
             shares = pos_size / close
@@ -169,15 +161,12 @@ if body_break_setup and waiting_for_retracement and not trade_taken_today and is
     current_time = math.round(time / 60000)
     time_since_session = current_time - session_start_time
     
-    // Check if price has retracted back into range and closed below 50% Fib
     if close <= range_high and close < fib_50 and time_since_session <= 120
         entry_price := close
-        // Stop loss above the high of previous two candles
         stop_loss := math.max(high[1], high[2])
         risk = math.abs(stop_loss - entry_price)
-        take_profit := entry_price - risk // 1:1 RR for short trade
+        take_profit := entry_price - risk
         
-        // Ensure valid risk/reward
         if risk > 0 and take_profit < entry_price
             pos_size = calculate_position_size()
             shares = pos_size / close
