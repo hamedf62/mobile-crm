@@ -1,0 +1,186 @@
+//@version=5
+strategy("GBP/USD Range Breakout Strategy", overlay=true, initial_capital=100, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.02)
+
+// Input Parameters
+london_start_hour = input.int(8, "London Session Start Hour (GMT)", minval=0, maxval=23)
+ny_start_hour = input.int(13, "New York Session Start Hour (GMT)", minval=0, maxval=23)
+show_range = input.bool(true, "Show Range Lines")
+show_fib = input.bool(true, "Show Fibonacci Levels")
+
+// Variables for range detection
+var float range_high = na
+var float range_low = na
+var int session_start_time = na
+var int candles_count = 0
+var bool range_defined = false
+var bool trade_taken_today = false
+var float initial_position_size = 40.0
+var float current_position_size = 40.0
+
+// Session detection functions
+is_london_session() =>
+    hour(time, "GMT") >= london_start_hour and hour(time, "GMT") < london_start_hour + 2
+
+is_ny_session() =>
+    hour(time, "GMT") >= ny_start_hour and hour(time, "GMT") < ny_start_hour + 2
+
+is_trading_session() =>
+    is_london_session() or is_ny_session()
+
+// New session detection
+is_new_session() =>
+    (hour(time, "GMT") == london_start_hour and minute(time) == 0) or 
+    (hour(time, "GMT") == ny_start_hour and minute(time) == 0)
+
+// Reset daily variables
+if dayofweek != dayofweek[1]
+    trade_taken_today := false
+    range_defined := false
+    candles_count := 0
+    range_high := na
+    range_low := na
+
+// Session start detection and range building
+if is_new_session()
+    range_defined := false
+    candles_count := 0
+    range_high := na
+    range_low := na
+    session_start_time := time
+
+// Build range from first 4 candles of the session
+if not range_defined and is_trading_session() and not na(session_start_time)
+    candles_count += 1
+    
+    if candles_count <= 4
+        if na(range_high) or high > range_high
+            range_high := high
+        if na(range_low) or low < range_low
+            range_low := low
+            
+        if candles_count == 4
+            range_defined := true
+
+// Fibonacci calculations
+var float fib_high = na
+var float fib_low = na
+var float fib_0 = na
+var float fib_50 = na
+var float fib_618 = na
+var float fib_100 = na
+
+calculate_fibonacci(high_point, low_point) =>
+    fib_0_val = low_point
+    fib_50_val = low_point + (high_point - low_point) * 0.5
+    fib_618_val = low_point + (high_point - low_point) * 0.618
+    fib_100_val = high_point
+    [fib_0_val, fib_50_val, fib_618_val, fib_100_val]
+
+// Entry conditions
+var bool waiting_for_shadow_entry = false
+var bool waiting_for_body_retracement = false
+var float shadow_candle_high = na
+var bool body_break_occurred = false
+var float breakout_high = na
+
+// Check for range breaks
+if range_defined and is_trading_session() and not trade_taken_today
+    
+    // Shadow Break Scenario
+    if high > range_high and close <= range_high and not waiting_for_shadow_entry and not waiting_for_body_retracement
+        waiting_for_shadow_entry := true
+        shadow_candle_high := high
+        
+    // Body Break Scenario
+    if close > range_high and not body_break_occurred
+        body_break_occurred := true
+        breakout_high := high
+        [fib_0, fib_50, fib_618, fib_100] := calculate_fibonacci(breakout_high, range_low)
+        
+    // Wait for retracement after body break
+    if body_break_occurred and close <= range_high and not waiting_for_body_retracement
+        waiting_for_body_retracement := true
+
+// Entry logic
+if range_defined and is_trading_session() and not trade_taken_today
+
+    // Shadow Break Entry
+    if waiting_for_shadow_entry and not na(shadow_candle_high)
+        stop_loss = shadow_candle_high
+        entry_price = close
+        take_profit = entry_price - (stop_loss - entry_price)
+        
+        strategy.entry("Shadow_Sell", strategy.short, qty=current_position_size)
+        strategy.exit("Shadow_Exit", "Shadow_Sell", stop=stop_loss, limit=take_profit)
+        
+        trade_taken_today := true
+        waiting_for_shadow_entry := false
+        
+        // Update position size for next trade (20% increase)
+        current_position_size := current_position_size * 1.2
+        
+    // Body Break Retracement Entry
+    if waiting_for_body_retracement and not na(fib_50) and close < fib_50 and close <= range_high
+        stop_loss = math.max(high[1], high[2]) // Behind high of previous two candles
+        entry_price = close
+        take_profit = entry_price - (stop_loss - entry_price)
+        
+        strategy.entry("Fib_Sell", strategy.short, qty=current_position_size)
+        strategy.exit("Fib_Exit", "Fib_Sell", stop=stop_loss, limit=take_profit)
+        
+        trade_taken_today := true
+        waiting_for_body_retracement := false
+        
+        // Update position size for next trade (20% increase)
+        current_position_size := current_position_size * 1.2
+
+// Reset waiting conditions if session ends
+if not is_trading_session()
+    waiting_for_shadow_entry := false
+    waiting_for_body_retracement := false
+    body_break_occurred := false
+
+// Plotting
+// Range lines
+range_high_line = show_range and range_defined ? line.new(x1=session_start_time, y1=range_high, x2=time, y2=range_high, color=color.red, width=2, style=line.style_solid) : na
+range_low_line = show_range and range_defined ? line.new(x1=session_start_time, y1=range_low, x2=time, y2=range_low, color=color.green, width=2, style=line.style_solid) : na
+
+// Fibonacci levels
+if show_fib and not na(fib_0) and body_break_occurred
+    line.new(x1=session_start_time, y1=fib_0, x2=time, y2=fib_0, color=color.blue, width=1, style=line.style_dashed)
+    line.new(x1=session_start_time, y1=fib_50, x2=time, y2=fib_50, color=color.orange, width=1, style=line.style_dashed)
+    line.new(x1=session_start_time, y1=fib_618, x2=time, y2=fib_618, color=color.purple, width=1, style=line.style_dashed)
+    line.new(x1=session_start_time, y1=fib_100, x2=time, y2=fib_100, color=color.yellow, width=1, style=line.style_dashed)
+
+// Labels for debugging
+if range_defined and show_range
+    label.new(x=session_start_time, y=range_high, text="Range High: " + str.tostring(range_high, "#.#####"), color=color.red, style=label.style_label_down, size=size.small)
+    label.new(x=session_start_time, y=range_low, text="Range Low: " + str.tostring(range_low, "#.#####"), color=color.green, style=label.style_label_up, size=size.small)
+
+// Session background
+bgcolor(is_london_session() ? color.new(color.blue, 95) : na, title="London Session")
+bgcolor(is_ny_session() ? color.new(color.orange, 95) : na, title="NY Session")
+
+// Plot signals
+plotshape(waiting_for_shadow_entry, title="Shadow Break Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+plotshape(waiting_for_body_retracement, title="Body Break Signal", location=location.abovebar, color=color.purple, style=shape.diamond, size=size.small)
+
+// Table for strategy information
+if barstate.islast
+    var table info_table = table.new(position.top_right, 2, 8, bgcolor=color.white, border_width=1)
+    table.cell(info_table, 0, 0, "Strategy Info", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 0, "", text_color=color.black)
+    table.cell(info_table, 0, 1, "Initial Capital", text_color=color.black)
+    table.cell(info_table, 1, 1, "$100", text_color=color.black)
+    table.cell(info_table, 0, 2, "Current Position Size", text_color=color.black)
+    table.cell(info_table, 1, 2, str.tostring(current_position_size, "#.##") + "%", text_color=color.black)
+    table.cell(info_table, 0, 3, "Trades Today", text_color=color.black)
+    table.cell(info_table, 1, 3, trade_taken_today ? "Yes" : "No", text_color=color.black)
+    table.cell(info_table, 0, 4, "Range Defined", text_color=color.black)
+    table.cell(info_table, 1, 4, range_defined ? "Yes" : "No", text_color=color.black)
+    table.cell(info_table, 0, 5, "London Session", text_color=color.black)
+    table.cell(info_table, 1, 5, "08:00-10:00 GMT", text_color=color.black)
+    table.cell(info_table, 0, 6, "NY Session", text_color=color.black)
+    table.cell(info_table, 1, 6, "13:00-15:00 GMT", text_color=color.black)
+    table.cell(info_table, 0, 7, "Timeframe", text_color=color.black)
+    table.cell(info_table, 1, 7, "5 minutes", text_color=color.black)
